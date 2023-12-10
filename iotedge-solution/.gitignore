@@ -4,6 +4,7 @@
 **/out
 build
 .env
+deployment.template.json
 venv
 logs
 .config

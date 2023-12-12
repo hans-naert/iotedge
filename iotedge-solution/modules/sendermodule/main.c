@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-
+#include "PJ_RPI_USER.h"
 #include "iothub_module_client_ll.h"
 #include "iothub_message.h"
 #include "azure_c_shared_utility/threadapi.h"
@@ -40,6 +40,16 @@ int main(void)
 {
     IOTHUB_MODULE_CLIENT_LL_HANDLE iotHubModuleClientHandle;
     EVENT_INSTANCE messages[MESSAGE_COUNT];
+
+    if(map_peripheral(&gpio) == -1) 
+	{
+       	 	printf("Failed to map the physical GPIO registers into the virtual memory space.\n");
+        	return -1;
+    }
+
+	// Define gpio 17 as output
+	INP_GPIO(17);
+	OUT_GPIO(17);
 
     srand((unsigned int)time(NULL));
     double avgWindSpeed = 10.0;
@@ -101,6 +111,11 @@ int main(void)
             }
             IoTHubModuleClient_LL_DoWork(iotHubModuleClientHandle);
             ThreadAPI_Sleep(1000);
+            if(iterator % 2 == 0)
+                GPIO_SET = 1 << 17;
+            else
+		        GPIO_CLR = 1 << 17;
+            
             iterator++;
         } while (1);
 

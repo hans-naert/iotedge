@@ -23,6 +23,7 @@ include_directories(${AZUREIOT_INC_FOLDER})
 
 set(main_c_files
     ./main.c
+    ./PJ_RPI_USER.c
 )
 
 add_executable(main ${main_c_files})

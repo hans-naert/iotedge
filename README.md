@@ -56,12 +56,12 @@ az acr login -n <ACR registry name>
 
 ## build the module Docker image
 ```
-docker build --rm -f "./modules/filtermodule/Dockerfile.arm64v8" -t <ACR login server>/filtermodule:0.0.1-arm64v8 "./modules/filtermodule"
+docker buildx build --platform linux/arm64/v8 --rm -f "./modules/filtermodule/Dockerfile.arm64v8" -t <ACR login server>/filtermodule:0.0.1-arm64v8 "./modules/filtermodule"
 ```
 
 ## push the Docker image
 ```
-docker push <ACR login server>/filtermodule:0.0.1-arm64v8
+docker push --platform linux/arm64/v8 <ACR login server>/filtermodule:0.0.1-arm64v8
 ```
 
 ## deploy to the edge device

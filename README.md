@@ -1,7 +1,9 @@
-# register your device
+# (re)register your device
 [Create and provision an IoT Edge device on Linux using symmetric keys](https://learn.microsoft.com/en-us/azure/iot-edge/how-to-provision-single-device-linux-symmetric?view=iotedge-1.5&tabs=azure-portal%2Cubuntu)
 ```console
-sudo iotedge config mp --connection-string 'PASTE_DEVICE_CONNECTION_STRING_HERE'
+sudo iotedge config mp --force --connection-string 'PASTE_DEVICE_CONNECTION_STRING_HERE'
+sudo iotedge config apply -c '/etc/aziot/config.toml'
+
 ```
 
 # instructions
@@ -56,19 +58,21 @@ az acr login -n <ACR registry name>
 
 ## build the module Docker image
 ```
-docker build --rm -f "./modules/filtermodule/Dockerfile.arm64v8" -t <ACR login server>/filtermodule:0.0.1-arm64v8 "./modules/filtermodule"
+docker buildx build --platform linux/arm64/v8 --rm -f "./modules/filtermodule/Dockerfile.arm64v8" -t <ACR login server>/filtermodule:0.0.1-arm64v8 "./modules/filtermodule"
+docker buildx build --platform linux/arm64/v8 --rm -f "./modules/sendermodule/Dockerfile.arm64v8" -t <ACR login server>/sendermodule:0.0.1-arm64v8 "./modules/filtermodule"
 ```
 
 ## push the Docker image
 ```
-docker push <ACR login server>/filtermodule:0.0.1-arm64v8
+docker push --platform linux/arm64/v8 <ACR login server>/filtermodule:0.0.1-arm64v8
+docker push --platform linux/arm64/v8 <ACR login server>/sendermodule:0.0.1-arm64v8
 ```
 
 ## deploy to the edge device
 
 Deploy with the GUI or with Azure CLI.
 
-If using the Azure CLI the deployment file needs to be adapted as described in the tutorial and place the correct image name for the filtermodule.
+If using the Azure CLI the deployment file needs to be adapted as described in the tutorial and place the correct image name for the filtermodule/sendermodule.
 ```
 az iot edge set-modules --hub-name <my-iot-hub> --device-id <my-device> --content ./deployment.template.json
 ```
@@ -84,3 +88,6 @@ edgeAgent        running          Up 2 hours       mcr.microsoft.com/azureiotedg
 edgeHub          running          Up 2 hours       mcr.microsoft.com/azureiotedge-hub:1.4
 filtermodule     running          Up 7 minutes     criothubhn2023.azurecr.io/filtermodule:0.0.1-arm64v8
 ```
+
+## Implement your code using Azure/iotedge examples
+[Azure iotedge examples](https://github.com/Azure/iotedge/blob/main/edge-modules/SimulatedTemperatureSensor/src/Program.cs)

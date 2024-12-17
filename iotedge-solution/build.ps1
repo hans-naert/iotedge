@@ -1,0 +1,2 @@
+docker buildx build --platform linux/arm64/v8 --rm -f "./modules/filtermodule/Dockerfile.arm64v8" -t containerhn2024.azurecr.io/filtermodule:0.0.1-arm64v8 "./modules/filtermodule"
+docker buildx build --platform linux/arm64/v8 --rm -f "./modules/sendermodule/Dockerfile.arm64v8" -t containerhn2024.azurecr.io/sendermodule:0.0.1-arm64v8 "./modules/sendermodule"

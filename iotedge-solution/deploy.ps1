@@ -1,0 +1,1 @@
+az iot edge set-modules --hub-name iothubhn2024 --device-id iotedge-student --content ./deployment.template.json

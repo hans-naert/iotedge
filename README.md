@@ -29,10 +29,21 @@ winget install -e --id Microsoft.AzureCLI
 az login
 ```
 
+Bij fout ivm TENANT-ID:
+```console
+az login --tenant <TENANT-ID>
+```
+
 ## Install azure-iot
 ```console
 az extension add --name azure-iot
 ```
+
+Bij fout "An error occurred. Pip failed with status code 2. Use --debug for more information.", voer onderstaande uit en installeer de extensie opnieuw.
+```code
+.\venv\Scripts\python.exe -m pip install --upgrade pip setuptools wheel
+```
+
 
 ## if error urllib3.packages.six not found
 ```console

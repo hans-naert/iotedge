@@ -10,7 +10,8 @@ details described below.
 
 ## Generate virtual envirionment
 ```console
-python -m venv .\venv
+winget install Python.Python.3.12
+python -3.12 -m venv .\venv
 ```
 
 ## Activate virtual environment
@@ -23,9 +24,15 @@ python -m venv .\venv
 pip install -r requirements.txt
 ```
 
+Requirements.txt bevat: 
+iotedgedev
+setuptools
+
 ## Install azure-cli and login
+
+Installeer Azure-CLI 2.73 (bevat Python 3.12): https://github.com/Azure/azure-cli/releases/download/azure-cli-2.73.0/azure-cli-2.73.0-x64.msi
+
 ```console
-winget install -e --id Microsoft.AzureCLI
 az login
 ```
 
@@ -39,12 +46,6 @@ az login --tenant <TENANT-ID>
 az extension add --name azure-iot
 ```
 
-Bij fout "An error occurred. Pip failed with status code 2. Use --debug for more information.", voer onderstaande uit en installeer de extensie opnieuw.
-```code
-.\venv\Scripts\python.exe -m pip install --upgrade pip setuptools wheel
-```
-
-
 ## if error urllib3.packages.six not found
 ```console
 pip uninstall urllib3
@@ -53,6 +54,8 @@ pip install urllib3
 
 ## generate iotedge solution with iotedgedev
 ```console
+mkdir iotedge-solution
+cd iotedge-solution
 iotedgedev solution init --template c
 ```
 

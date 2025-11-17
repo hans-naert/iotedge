@@ -11,7 +11,7 @@ details described below.
 ## Generate virtual envirionment
 ```console
 winget install Python.Python.3.12
-python -3.12 -m venv .\venv
+py -3.12 -m venv .\venv
 ```
 
 ## Activate virtual environment

@@ -1,5 +1,5 @@
-# Use official Python 3.12 image as base
-FROM python:3.12-slim
+# Use official Python 3.9 image as base (iotedgedev 3.3.7 requires <3.10)
+FROM python:3.9-slim
 
 # Set working directory
 WORKDIR /workspace
@@ -19,24 +19,23 @@ RUN apt-get update && apt-get install -y \
 # Install Azure CLI (includes Python 3.12)
 RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
 
-# Create virtual environment
-RUN python3.12 -m venv /workspace/venv
+# Create virtual environment outside workspace to avoid volume mapping conflicts
+RUN python3.9 -m venv /opt/venv
 
 # Activate venv and set PATH
-ENV PATH="/workspace/venv/bin:$PATH"
+ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy requirements.txt from host
-COPY requirements.txt /workspace/requirements.txt
+COPY requirements.txt /tmp/requirements.txt
 
 # Install requirements in virtual environment
-RUN /workspace/venv/bin/pip install --upgrade pip && \
-    /workspace/venv/bin/pip install -r /workspace/requirements.txt
+RUN /opt/venv/bin/pip install --no-cache-dir --upgrade pip && \
+    /opt/venv/bin/pip install --no-cache-dir -r /tmp/requirements.txt
 
 # Install azure-iot extension
 RUN az extension add --name azure-iot
 
-# Fix compatibility: force downgrade urllib3 to work with iotedgedev's docker dependency
-RUN /workspace/venv/bin/pip install --force-reinstall "urllib3<2.0.0"
+# Note: urllib3 stays <2 via transitive deps (requests<1.27)
 
 # Create iotedge-solution directory
 RUN mkdir -p /workspace/iotedge-solution
@@ -47,6 +46,9 @@ WORKDIR /workspace/iotedge-solution
 # Configure Docker socket for Docker-in-Docker
 # When running container, mount the Docker socket from host:
 # docker run -v /var/run/docker.sock:/var/run/docker.sock ...
+
+# Declare volume for persistent workspace storage
+VOLUME ["/workspace"]
 
 # Note: The following commands require user input/interaction and should be run manually:
 # 1. iotedgedev solution init --template c

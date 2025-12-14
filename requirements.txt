@@ -1,2 +1,2 @@
-iotedgedev
+iotedgedev==3.3.7
 setuptools

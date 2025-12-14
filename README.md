@@ -1,33 +1,63 @@
-# IoT Edge Docker Development Environment
+# IoT Edge Dev Container Usage
 
-## Quick Start
+This workspace uses a Docker container to run `iotedgedev` commands with the project files mapped from the host.
 
-### Build the Docker image
+The Docker container is built using Docker Compose based on the Dockerfile configuration in this workspace.
+
+For more information check [Microsoft Learn: Tutorial – Develop IoT Edge modules using Visual Studio Code](https://learn.microsoft.com/en-us/azure/iot-edge/tutorial-develop-for-linux?view=iotedge-1.4&tabs=c&pivots=iotedge-dev-cli)
+
+### Build and start the container
 ```powershell
-docker build -t iotedge-dev:latest .
+docker-compose up -d --build
 ```
 
-### Run the container with Docker-in-Docker support
+**Note:** The `docker-compose.yml` file configures:
+- Docker-in-Docker support via Docker socket mounting
+- Persistent workspace folder (`./workspace` → `/workspace` in container)
+- Interactive terminal access
+
+### Initialize IoT Edge solution
 ```powershell
-docker run -it -v /var/run/docker.sock:/var/run/docker.sock iotedge-dev:latest
+docker-compose run --rm iotedge-dev iotedgedev solution init --template c
 ```
 
-### Inside the container - Initialize IoT Edge solution
-```bash
-iotedgedev solution init --template c
-```
+### Edit .env file
+- update the container registry settings:
+    - CONTAINER_REGISTRY_USERNAME="\<your-registry-username\>"
+    - CONTAINER_REGISTRY_PASSWORD="\<your-registry-password\>"
+    - CONTAINER_REGISTRY_ADDRESS="\<your-registry-address\>"
+- set the default platform to arm64v8: DEFAULT_PLATFORM="arm64v8"
+- set deployment target: IOTHUB_DEPLOYMENT_TARGET_CONDITION="deviceId='\<your-device-id\>'"
 
-### Login to container registry
-```bash
-echo <container registry password> | docker login -u <container registry username> --password-stdin <container registry server>
+
+### Add module
+```powershell
+docker-compose run --rm iotedge-dev iotedgedev   solution add -t c <module-name>
 ```
 
 ### Build the module image
-```bash
-iotedgedev build --platform arm64v8
+```powershell
+docker-compose run --rm iotedge-dev iotedgedev solution build
 ```
 
 ### Push the module image
-```bash
-iotedgedev push
+```powershell
+docker-compose run --rm iotedge-dev iotedgedev solution push
+```
+
+### Publish the deployment to IoT Hub
+```powershell
+docker-compose run --rm iotedge-dev iotedgedev iothub deploy -p 1 -n <name of deployment>
+```
+dock
+### Optional
+
+#### Access interactive shell
+```powershell
+docker-compose exec iotedge-dev bash
+```
+
+#### Stop and remove the container
+```powershell
+docker-compose down
 ```

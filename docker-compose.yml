@@ -1,0 +1,13 @@
+services:
+  iotedge-dev:
+    build: .
+    image: iotedge-dev:latest
+    container_name: iotedge-dev
+    stdin_open: true
+    tty: true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./workspace:/workspace
+    working_dir: /workspace/iotedge-solution
+    environment:
+      - PATH=/opt/venv/bin:/usr/local/bin:/usr/bin:/bin

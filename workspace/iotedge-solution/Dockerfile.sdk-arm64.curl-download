@@ -1,0 +1,76 @@
+# Shared cross-compilation base image for arm64 IoT Edge C modules
+# Alternative version: downloads pre-built curl packages (faster but more dependencies)
+# Build once: docker build -f Dockerfile.sdk-arm64.curl-download -t iotedge-sdk-arm64:latest .
+# syntax=docker/dockerfile:1.4
+FROM ubuntu:18.04
+ENV DEBIAN_FRONTEND=noninteractive
+ENV SYSROOT=/opt/arm64-rootfs
+ENV CC=aarch64-linux-gnu-gcc
+ENV CXX=aarch64-linux-gnu-g++
+
+# Install cross-compilation toolchain
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc-aarch64-linux-gnu g++-aarch64-linux-gnu cmake make curl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Get arm64 rootfs from Ubuntu bionic (matching PPA packages)
+RUN mkdir -p ${SYSROOT} && \
+    curl -fsSL https://partner-images.canonical.com/core/bionic/current/ubuntu-bionic-core-cloudimg-arm64-root.tar.gz | tar xz -C ${SYSROOT}
+
+# Download arm64 runtime libraries from Ubuntu ports INCLUDING libcurl and all dependencies
+RUN mkdir -p /tmp/debs && cd /tmp/debs && \
+    # OpenSSL
+    curl -fsSLO http://ports.ubuntu.com/pool/main/o/openssl/libssl-dev_1.1.1-1ubuntu2.1~18.04.23_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/o/openssl/libssl1.1_1.1.1-1ubuntu2.1~18.04.23_arm64.deb && \
+    # UUID
+    curl -fsSLO http://ports.ubuntu.com/pool/main/u/util-linux/uuid-dev_2.31.1-0.4ubuntu3.7_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/u/util-linux/libuuid1_2.31.1-0.4ubuntu3.7_arm64.deb && \
+    # Zlib
+    curl -fsSLO http://ports.ubuntu.com/pool/main/z/zlib/zlib1g-dev_1.2.11.dfsg-0ubuntu2.2_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/z/zlib/zlib1g_1.2.11.dfsg-0ubuntu2.2_arm64.deb && \
+    # curl and dependencies
+    curl -fsSLO http://ports.ubuntu.com/pool/main/c/curl/libcurl4_7.58.0-2ubuntu3.24_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/c/curl/libcurl4-openssl-dev_7.58.0-2ubuntu3.24_arm64.deb && \
+    # curl dependencies: nghttp2, rtmp, ldap, gssapi, psl, idn
+    curl -fsSLO http://ports.ubuntu.com/pool/main/n/nghttp2/libnghttp2-14_1.30.0-1ubuntu1_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/n/nghttp2/libnghttp2-dev_1.30.0-1ubuntu1_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/r/rtmpdump/librtmp1_2.4+20151223.gitfa8646d.1-1_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/o/openldap/libldap-2.4-2_2.4.45+dfsg-1ubuntu1.11_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/o/openldap/libldap-common_2.4.45+dfsg-1ubuntu1.11_all.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/k/krb5/libgssapi-krb5-2_1.16-2ubuntu0.4_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/k/krb5/libkrb5-3_1.16-2ubuntu0.4_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/k/krb5/libk5crypto3_1.16-2ubuntu0.4_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/k/krb5/libkrb5support0_1.16-2ubuntu0.4_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/libp/libpsl/libpsl5_0.19.1-5build1_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/libi/libidn2/libidn2-0_2.0.4-1.1ubuntu0.2_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/libu/libunistring/libunistring2_0.9.9-0ubuntu1_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/s/sasl2/libsasl2-2_2.1.27~101-g0780600+dfsg-3ubuntu2.4_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/g/gnutls28/libgnutls30_3.5.18-1ubuntu1.6_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/g/gmp/libgmp10_6.1.2+dfsg-2_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/n/nettle/libnettle6_3.4-1ubuntu0.1_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/n/nettle/libhogweed4_3.4-1ubuntu0.1_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/libt/libtasn1-6/libtasn1-6_4.13-2_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/p/p11-kit/libp11-kit0_0.23.9-2ubuntu0.1_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/libf/libffi/libffi6_3.2.1-8_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/k/keyutils/libkeyutils1_1.5.9-9.2ubuntu2.1_arm64.deb && \
+    for d in *.deb; do dpkg-deb -x "$d" ${SYSROOT}; done && rm -rf /tmp/debs
+
+# Download Azure IoT SDK arm64 packages from PPA (all dependencies)
+ENV PPA_BASE=http://ppa.launchpad.net/aziotsdklinux/ppa-azureiot/ubuntu/pool/main
+RUN mkdir -p /tmp/azuresdk && cd /tmp/azuresdk && \
+    curl -fsSLO ${PPA_BASE}/a/azure-macro-utils-c/azure-macro-utils-c-dev_0.2.0.0-11bionic_arm64.deb && \
+    curl -fsSLO ${PPA_BASE}/a/azure-macro-utils-c/azure-macro-utils-c-lib_0.2.0.0-11bionic_arm64.deb && \
+    curl -fsSLO ${PPA_BASE}/u/umock-c/umock-c-dev_0.2.0.0-11bionic_arm64.deb && \
+    curl -fsSLO ${PPA_BASE}/u/umock-c/umock-c-lib_0.2.0.0-11bionic_arm64.deb && \
+    curl -fsSLO ${PPA_BASE}/a/azure-c-shared-util/azure-c-shared-util-dev_0.2.0.0-24bionic_arm64.deb && \
+    curl -fsSLO ${PPA_BASE}/a/azure-c-shared-util/azure-c-shared-util-lib_0.2.0.0-24bionic_arm64.deb && \
+    curl -fsSLO ${PPA_BASE}/a/azure-uamqp-c/azure-uamqp-c-dev_0.2.0.0-24bionic_arm64.deb && \
+    curl -fsSLO ${PPA_BASE}/a/azure-uamqp-c/azure-uamqp-c-lib_0.2.0.0-24bionic_arm64.deb && \
+    curl -fsSLO ${PPA_BASE}/a/azure-umqtt-c/azure-umqtt-c-dev_0.2.0.0-24bionic_arm64.deb && \
+    curl -fsSLO ${PPA_BASE}/a/azure-umqtt-c/azure-umqtt-c-lib_0.2.0.0-24bionic_arm64.deb && \
+    curl -fsSLO ${PPA_BASE}/a/azure-iot-sdk-c/azure-iot-sdk-c-dev_0.2.0.0-24bionic_arm64.deb && \
+    curl -fsSLO ${PPA_BASE}/a/azure-iot-sdk-c/azure-iot-sdk-c-lib_0.2.0.0-24bionic_arm64.deb && \
+    for d in *.deb; do dpkg-deb -x "$d" ${SYSROOT}; done && \
+    rm -rf /tmp/azuresdk
+
+WORKDIR /app

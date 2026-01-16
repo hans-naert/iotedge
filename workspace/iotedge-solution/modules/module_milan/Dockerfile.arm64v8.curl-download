@@ -1,0 +1,58 @@
+# syntax=docker/dockerfile:1.4
+# Alternative version: uses pre-downloaded curl packages (faster SDK build, more runtime deps)
+# Uses shared SDK base image - build it first:
+#   docker build -f ../Dockerfile.sdk-arm64.curl-download -t iotedge-sdk-arm64:latest ..
+ARG SDK_IMAGE=iotedge-sdk-arm64:latest
+ARG TARGETPLATFORM=linux/arm64/v8
+
+# Build stage - uses pre-built SDK image
+FROM ${SDK_IMAGE} AS build
+WORKDIR /app
+COPY . .
+RUN cmake -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+          -DCMAKE_C_COMPILER=${CC} -DCMAKE_CXX_COMPILER=${CXX} \
+          -DCMAKE_SYSROOT=${SYSROOT} \
+          -DCMAKE_FIND_ROOT_PATH=${SYSROOT} \
+          -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY . \
+    && make -j$(nproc)
+
+# Download runtime dependencies in build stage (no QEMU)
+# Includes full libcurl with all its dependencies
+RUN mkdir -p /tmp/runtime-debs && cd /tmp/runtime-debs && \
+    # Base dependencies
+    curl -fsSLO http://ports.ubuntu.com/pool/main/o/openssl/libssl1.1_1.1.1-1ubuntu2.1~18.04.23_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/u/util-linux/libuuid1_2.31.1-0.4ubuntu3.7_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/z/zlib/zlib1g_1.2.11.dfsg-0ubuntu2.2_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/o/openssl/openssl_1.1.1-1ubuntu2.1~18.04.23_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/c/ca-certificates/ca-certificates_20230311ubuntu0.18.04.1_all.deb && \
+    # curl and all its dependencies
+    curl -fsSLO http://ports.ubuntu.com/pool/main/c/curl/libcurl4_7.58.0-2ubuntu3.24_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/n/nghttp2/libnghttp2-14_1.30.0-1ubuntu1_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/r/rtmpdump/librtmp1_2.4+20151223.gitfa8646d.1-1_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/o/openldap/libldap-2.4-2_2.4.45+dfsg-1ubuntu1.11_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/o/openldap/libldap-common_2.4.45+dfsg-1ubuntu1.11_all.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/k/krb5/libgssapi-krb5-2_1.16-2ubuntu0.4_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/k/krb5/libkrb5-3_1.16-2ubuntu0.4_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/k/krb5/libk5crypto3_1.16-2ubuntu0.4_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/k/krb5/libkrb5support0_1.16-2ubuntu0.4_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/libp/libpsl/libpsl5_0.19.1-5build1_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/libi/libidn2/libidn2-0_2.0.4-1.1ubuntu0.2_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/libu/libunistring/libunistring2_0.9.9-0ubuntu1_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/s/sasl2/libsasl2-2_2.1.27~101-g0780600+dfsg-3ubuntu2.4_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/g/gnutls28/libgnutls30_3.5.18-1ubuntu1.6_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/g/gmp/libgmp10_6.1.2+dfsg-2_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/n/nettle/libnettle6_3.4-1ubuntu0.1_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/n/nettle/libhogweed4_3.4-1ubuntu0.1_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/libt/libtasn1-6/libtasn1-6_4.13-2_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/p/p11-kit/libp11-kit0_0.23.9-2ubuntu0.1_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/libf/libffi/libffi6_3.2.1-8_arm64.deb && \
+    curl -fsSLO http://ports.ubuntu.com/pool/main/k/keyutils/libkeyutils1_1.5.9-9.2ubuntu2.1_arm64.deb && \
+    for d in *.deb; do dpkg-deb -x "$d" /tmp/runtime-rootfs; done
+
+# Runtime stage (runs on arm64 device) - NO QEMU needed
+FROM --platform=$TARGETPLATFORM arm64v8/ubuntu:bionic
+WORKDIR /app
+# Copy pre-extracted runtime dependencies (includes full libcurl)
+COPY --from=build /tmp/runtime-rootfs/ /
+COPY --from=build /app/main ./main
+CMD ["./main"]

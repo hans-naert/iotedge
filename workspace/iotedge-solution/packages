@@ -1,0 +1,201 @@
+Package: azure-c-shared-util-dev
+Source: azure-c-shared-util
+Priority: optional
+Section: libdevel
+Installed-Size: 221
+Maintainer: Azure User <aziotsdklinux@outlook.com>
+Architecture: arm64
+Version: 0.2.0.0-24bionic
+Depends: azure-c-shared-util-lib (= 0.2.0.0-24bionic), uuid-dev, libssl-dev, libcurl4-openssl-dev, curl, umock-c-dev, azure-macro-utils-c-dev
+Filename: pool/main/a/azure-c-shared-util/azure-c-shared-util-dev_0.2.0.0-24bionic_arm64.deb
+Size: 34164
+MD5sum: 505210732f58dd3585fb593e30a50e7c
+SHA1: ad9d20b9d7de8f91de93739a8f673fb494224039
+SHA256: ff88515d0d3e77eb81136e3660ca65a16a7c146ab6ea25b9ddd3496fd3321f7c
+Description: AzureIoT Shared Utility Development Library Package
+Description-md5: 7e42cf6c4f7607b70930895bd40f541f
+
+Package: azure-c-shared-util-lib
+Source: azure-c-shared-util
+Priority: optional
+Section: libs
+Installed-Size: 517
+Maintainer: Azure User <aziotsdklinux@outlook.com>
+Architecture: arm64
+Version: 0.2.0.0-24bionic
+Depends: uuid-dev, libssl-dev, libcurl4-openssl-dev, curl, umock-c-lib, azure-macro-utils-c-lib
+Filename: pool/main/a/azure-c-shared-util/azure-c-shared-util-lib_0.2.0.0-24bionic_arm64.deb
+Size: 91648
+MD5sum: 71a0da08fe045a520ae7bcec75dc582c
+SHA1: c6626e3ff155621bc63e05dd2f41cecbbedfdac1
+SHA256: 0e606869385f1f8e5aa150c151ce7ecdca723d7ca0d7a3feb263335cc6fa5ce8
+Description: AzureIoT Shared Utility Library Package
+Description-md5: 412f45b30c657922752ce53acb6cd78a
+
+Package: azure-iot-sdk-c-dev
+Source: azure-iot-sdk-c
+Priority: optional
+Section: libdevel
+Installed-Size: 351
+Maintainer: Azure User <aziotsdklinux@outlook.com>
+Architecture: arm64
+Version: 0.2.0.0-24bionic
+Depends: azure-iot-sdk-c-lib (= 0.2.0.0-24bionic), libssl-dev, libcurl4-openssl-dev, curl, azure-c-shared-util-dev, azure-uamqp-c-dev, azure-umqtt-c-dev
+Filename: pool/main/a/azure-iot-sdk-c/azure-iot-sdk-c-dev_0.2.0.0-24bionic_arm64.deb
+Size: 48180
+MD5sum: 1dc2529a2eb86d3b3ad1c8a03abf7240
+SHA1: 958704c60c624da07d8c5294fba6640771ad8560
+SHA256: 9a8011c8504d8701e2bff89c1094b1fb9ce74c6f55c55252e541771f4355c7bd
+Description: Microsoft Azure IoT device SDK for C Library
+Description-md5: 3b5efbd90cdbee003198f10f5b6fef71
+
+Package: azure-iot-sdk-c-lib
+Source: azure-iot-sdk-c
+Priority: optional
+Section: libs
+Installed-Size: 3105
+Maintainer: Azure User <aziotsdklinux@outlook.com>
+Architecture: arm64
+Version: 0.2.0.0-24bionic
+Depends: libssl-dev, libcurl4-openssl-dev, curl, azure-c-shared-util-dev, azure-uamqp-c-dev, azure-umqtt-c-dev
+Filename: pool/main/a/azure-iot-sdk-c/azure-iot-sdk-c-lib_0.2.0.0-24bionic_arm64.deb
+Size: 387872
+MD5sum: a62b23eb21a4f8d992364c50218a2774
+SHA1: 7389d2c105c0406615619461566130aa325db39f
+SHA256: 9b95caf0ec8b7097f46c4f5e42c28b18d79cea0f14ed8f541446635b79b31eae
+Description: Microsoft Azure IoT device SDK for C Library
+Description-md5: 3b5efbd90cdbee003198f10f5b6fef71
+
+Package: azure-macro-utils-c-dev
+Source: azure-macro-utils-c
+Priority: optional
+Section: libdevel
+Installed-Size: 959
+Maintainer: Azure User <aziotsdklinux@outlook.com>
+Architecture: arm64
+Version: 0.2.0.0-11bionic
+Depends: azure-macro-utils-c-lib (= 0.2.0.0-11bionic)
+Filename: pool/main/a/azure-macro-utils-c/azure-macro-utils-c-dev_0.2.0.0-11bionic_arm64.deb
+Size: 24900
+MD5sum: 78365dd0e8b95a6f008efebc2e6855ce
+SHA1: 43744c607feba073da2fd0fabe1241e2f21ae3bc
+SHA256: fbfec5a9f5a63ccabd7715edea89f138034c1a800fcdf7d6341584f5e9567cd5
+Description: Microsoft Azure IoT SDKs - macro utils for C
+Description-md5: 1e587f0741a710ab94a466d300409d18
+
+Package: azure-macro-utils-c-lib
+Source: azure-macro-utils-c
+Priority: optional
+Section: libs
+Installed-Size: 10
+Maintainer: Azure User <aziotsdklinux@outlook.com>
+Architecture: arm64
+Version: 0.2.0.0-11bionic
+Filename: pool/main/a/azure-macro-utils-c/azure-macro-utils-c-lib_0.2.0.0-11bionic_arm64.deb
+Size: 2080
+MD5sum: a43a3c7fdc71145b0d0a50203aade5d1
+SHA1: ad36d497588ff6ae0a0358b68ac5f7367379af90
+SHA256: 0df6a71db31054509b4774bd2d77a89d8184cfa37032beb0c1c88ba200d6d12d
+Description: Microsoft Azure IoT SDKs - macro utils for C
+Description-md5: 1e587f0741a710ab94a466d300409d18
+
+Package: azure-uamqp-c-dev
+Source: azure-uamqp-c
+Priority: optional
+Section: libdevel
+Installed-Size: 206
+Maintainer: AzureIoT User <aziotsdklinux@outlook.com>
+Architecture: arm64
+Version: 0.2.0.0-24bionic
+Depends: azure-uamqp-c-lib (= 0.2.0.0-24bionic), azure-c-shared-util-dev
+Filename: pool/main/a/azure-uamqp-c/azure-uamqp-c-dev_0.2.0.0-24bionic_arm64.deb
+Size: 22116
+MD5sum: 19a8a3400b15c274ec5924372806ad81
+SHA1: ff639cee385a3d092ccd32e89aa664cdbdb07d56
+SHA256: b4ddac8ee295366977a6699c5c716d44a0bef757c4300612905e523a7163584b
+Description: uAMQP is a general purpose C library for AMQP.
+Description-md5: fe86792461ce08ce3df17b5ccfa9f0d3
+
+Package: azure-uamqp-c-lib
+Source: azure-uamqp-c
+Priority: optional
+Section: libs
+Installed-Size: 706
+Maintainer: AzureIoT User <aziotsdklinux@outlook.com>
+Architecture: arm64
+Version: 0.2.0.0-24bionic
+Depends: curl, azure-c-shared-util-dev
+Filename: pool/main/a/azure-uamqp-c/azure-uamqp-c-lib_0.2.0.0-24bionic_arm64.deb
+Size: 102060
+MD5sum: 319ccaead8f3023100b38e511916ac2d
+SHA1: 3cdbfca85b7a69f59eeb1d89a67ef6a3f3d305d8
+SHA256: 90594e4fcebc622192125b468198e9eb5daf0575768858808394f35c14c04aec
+Description: uAMQP is a general purpose C library for AMQP.
+Description-md5: 850dcf54b139df69fffe03e39d0a511d
+
+Package: azure-umqtt-c-dev
+Source: azure-umqtt-c
+Priority: optional
+Section: libdevel
+Installed-Size: 28
+Maintainer: Azure User <aziotsdklinux@outlook.com>
+Architecture: arm64
+Version: 0.2.0.0-24bionic
+Depends: azure-umqtt-c-lib (= 0.2.0.0-24bionic)
+Filename: pool/main/a/azure-umqtt-c/azure-umqtt-c-dev_0.2.0.0-24bionic_arm64.deb
+Size: 5684
+MD5sum: 55f1bf6785bb882ead217014e6ef54c9
+SHA1: e6184fe3168af3b8e2f03194573c1bd8aab0c241
+SHA256: ff88fb9d914f4a703be14758e3a725425c4ec8afd37158d04193d6d64bb6c07c
+Description: azure-umqtt-c is a general purpose library build for MQTT protocol
+Description-md5: 7f03a6be00faefc559d95c152d6d3eca
+
+Package: azure-umqtt-c-lib
+Source: azure-umqtt-c
+Priority: optional
+Section: libs
+Installed-Size: 67
+Maintainer: Azure User <aziotsdklinux@outlook.com>
+Architecture: arm64
+Version: 0.2.0.0-24bionic
+Filename: pool/main/a/azure-umqtt-c/azure-umqtt-c-lib_0.2.0.0-24bionic_arm64.deb
+Size: 15272
+MD5sum: dc4b3c84bd0837153d42bdff87a6abce
+SHA1: d4015b4bafa5e543d0a32d2834d2a5acf48d9fc5
+SHA256: 5c3425abdc62a9bf5d71864345a8ad76fb12b0a7095b71637d63f30cc2b7ba36
+Description: azure-umqtt-c is a general purpose library build for MQTT protocol
+Description-md5: 8686850c3f4c1ac23541ec715e02ce9f
+
+Package: umock-c-dev
+Source: umock-c
+Priority: optional
+Section: libdevel
+Installed-Size: 155
+Maintainer: Azure User <aziotsdklinux@outlook.com>
+Architecture: arm64
+Version: 0.2.0.0-11bionic
+Depends: umock-c-lib (= 0.2.0.0-11bionic)
+Filename: pool/main/u/umock-c/umock-c-dev_0.2.0.0-11bionic_arm64.deb
+Size: 19636
+MD5sum: 049151e8ed3107bec75641ef1c9ac98d
+SHA1: 68b1f777ba8f7bf674606712a8f387c025ec0192
+SHA256: babe8c0bb5fd19b9517800cfacd80eb72fdb481421000a179b8ab1fc34789598
+Description: Microsoft Azure IoT device mocking Library
+Description-md5: 6355fea982da480a37ce0cd126e2a0d3
+
+Package: umock-c-lib
+Source: umock-c
+Priority: optional
+Section: libs
+Installed-Size: 121
+Maintainer: Azure User <aziotsdklinux@outlook.com>
+Architecture: arm64
+Version: 0.2.0.0-11bionic
+Filename: pool/main/u/umock-c/umock-c-lib_0.2.0.0-11bionic_arm64.deb
+Size: 17860
+MD5sum: 4f5b3c3ab680c6d5f4ef7b4ba230b80c
+SHA1: 7f99c57e8efd0c0d00cdf0a905aa7c9189dbbb12
+SHA256: e1f2f364c816ad8ae7531246d9ec6e9bc9665598cdc035372023be34923c6608
+Description: Microsoft Azure IoT device mocking Library
+Description-md5: 6355fea982da480a37ce0cd126e2a0d3
+

@@ -2,7 +2,7 @@
   "$schema-version": "0.0.1",
   "description": "",
   "image": {
-    "repository": "${CONTAINER_REGISTRY_SERVER}/module_milan",
+    "repository": "${CONTAINER_REGISTRY_SERVER}/module_student",
     "tag": {
       "version": "0.0.1",
       "platforms": {

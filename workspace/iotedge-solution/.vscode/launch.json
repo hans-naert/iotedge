@@ -47,7 +47,7 @@
       }
     },
     {
-      "name": "module_milan Remote Debug (C)",
+      "name": "module_student Remote Debug (C)",
       "type": "cppdbg",
       "request": "attach",
       "program": "./main",
@@ -58,14 +58,14 @@
         "pipeArgs": [
           "exec",
           "-i",
-          "module_milan",
+          "module_student",
           "sh",
           "-c"
         ],
         "debuggerPath": "/usr/bin/gdb"
       },
       "sourceFileMap": {
-        "/app": "${workspaceFolder}/modules/module_milan"
+        "/app": "${workspaceFolder}/modules/module_student"
       },
       "linux": {
         "MIMode": "gdb",

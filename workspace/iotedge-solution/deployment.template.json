@@ -71,13 +71,13 @@
               "createOptions": {}
             }
           },
-          "module_milan": {
+          "module_student": {
             "version": "1.0",
             "type": "docker",
             "status": "running",
             "restartPolicy": "always",
             "settings": {
-              "image": "${MODULES.module_milan}",
+              "image": "${MODULES.module_student}",
               "createOptions": {
                 "HostConfig": {
                     "Privileged": true
@@ -94,7 +94,7 @@
         "routes": {
           "sensorTofiltermodule": "FROM /messages/modules/tempSensor/outputs/temperatureOutput INTO BrokeredEndpoint(\"/modules/filtermodule/inputs/input1\")",
           "filtermoduleToIoTHub": "FROM /messages/modules/filtermodule/outputs/* INTO $upstream",
-          "module_milanToIoTHub": "FROM /messages/modules/module_milan/outputs/* INTO $upstream"
+          "module_studentToIoTHub": "FROM /messages/modules/module_student/outputs/* INTO $upstream"
         },
         "storeAndForwardConfiguration": {
           "timeToLiveSecs": 7200

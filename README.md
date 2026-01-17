@@ -33,9 +33,9 @@ Each module has a `Dockerfile.arm64v8.cross` that uses the SDK image:
 cd workspace/iotedge-solution/modules/filtermodule
 docker build -f Dockerfile.arm64v8.cross -t filtermodule:arm64 .
 
-# Build module_milan
-cd workspace/iotedge-solution/modules/module_milan
-docker build -f Dockerfile.arm64v8.cross -t module_milan:arm64 .
+# Build module_student
+cd workspace/iotedge-solution/modules/module_student
+docker build -f Dockerfile.arm64v8.cross -t module_student:arm64 .
 ```
 
 ### Step 3: Verify with QEMU (Optional)

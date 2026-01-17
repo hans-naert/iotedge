@@ -1,5 +1,6 @@
 # Shared cross-compilation base image for arm64 IoT Edge C modules
-# Build once: docker build -f Dockerfile.sdk-arm64 -t iotedge-sdk-arm64:latest .
+# Alternative version: downloads pre-built curl packages (faster but more dependencies)
+# Build once: docker build -f Dockerfile.sdk-arm64.curl-download -t iotedge-sdk-arm64:latest .
 # syntax=docker/dockerfile:1.4
 FROM ubuntu:18.04
 ENV DEBIAN_FRONTEND=noninteractive
@@ -16,44 +17,67 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN mkdir -p ${SYSROOT} && \
     curl -fsSL https://partner-images.canonical.com/core/bionic/current/ubuntu-bionic-core-cloudimg-arm64-root.tar.gz | tar xz -C ${SYSROOT}
 
-# Download arm64 runtime libraries from Ubuntu ports (NO libcurl - we build it)
-RUN mkdir -p /tmp/debs && cd /tmp/debs && \
-    curl -fsSLO http://ports.ubuntu.com/pool/main/o/openssl/libssl-dev_1.1.1-1ubuntu2.1~18.04.23_arm64.deb && \
-    curl -fsSLO http://ports.ubuntu.com/pool/main/o/openssl/libssl1.1_1.1.1-1ubuntu2.1~18.04.23_arm64.deb && \
-    curl -fsSLO http://ports.ubuntu.com/pool/main/u/util-linux/uuid-dev_2.31.1-0.4ubuntu3.7_arm64.deb && \
-    curl -fsSLO http://ports.ubuntu.com/pool/main/u/util-linux/libuuid1_2.31.1-0.4ubuntu3.7_arm64.deb && \
-    curl -fsSLO http://ports.ubuntu.com/pool/main/z/zlib/zlib1g-dev_1.2.11.dfsg-0ubuntu2.2_arm64.deb && \
-    curl -fsSLO http://ports.ubuntu.com/pool/main/z/zlib/zlib1g_1.2.11.dfsg-0ubuntu2.2_arm64.deb && \
-    for d in *.deb; do dpkg-deb -x "$d" ${SYSROOT}; done && rm -rf /tmp/debs
+# Download arm64 runtime libraries from Ubuntu ports INCLUDING libcurl and all dependencies
+# Add arm64 ports sources so apt can find foreign-arch packages, then download current versions
+RUN dpkg --add-architecture arm64 && \
+    sed -Ei 's/^deb /deb [arch=amd64] /' /etc/apt/sources.list && \
+    printf "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports bionic main restricted universe multiverse\n" \
+        "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports bionic-updates main restricted universe multiverse\n" \
+        "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports bionic-security main restricted universe multiverse\n" \
+        > /etc/apt/sources.list.d/arm64.list && \
+    apt-get update && \
+    mkdir -p /tmp/debs && cd /tmp/debs && \
+    apt-get download \
+        libssl-dev:arm64 libssl1.1:arm64 \
+        uuid-dev:arm64 libuuid1:arm64 \
+        zlib1g-dev:arm64 zlib1g:arm64 \
+        libcurl4:arm64 libcurl4-openssl-dev:arm64 \
+        libnghttp2-14:arm64 libnghttp2-dev:arm64 \
+        librtmp1:arm64 \
+        libldap-2.4-2:arm64 libldap-common \
+        libgssapi-krb5-2:arm64 libkrb5-3:arm64 libk5crypto3:arm64 libkrb5support0:arm64 \
+        libgssapi3-heimdal:arm64 libkrb5-26-heimdal:arm64 libasn1-8-heimdal:arm64 \
+        libhcrypto4-heimdal:arm64 libheimbase1-heimdal:arm64 libheimntlm0-heimdal:arm64 \
+        libhx509-5-heimdal:arm64 libwind0-heimdal:arm64 libroken18-heimdal:arm64 \
+        libsqlite3-0:arm64 \
+        libpsl5:arm64 libidn2-0:arm64 libunistring2:arm64 \
+        libsasl2-2:arm64 \
+        libgnutls30:arm64 libgmp10:arm64 libnettle6:arm64 libhogweed4:arm64 libtasn1-6:arm64 libp11-kit0:arm64 libffi6:arm64 libkeyutils1:arm64 && \
+    for d in *.deb; do dpkg-deb -x "$d" ${SYSROOT}; done && rm -rf /tmp/debs && \
+    rm -rf /var/lib/apt/lists/*
 
-# Build minimal curl for arm64 (only SSL, no ldap/rtmp/nghttp2/kerberos)
-WORKDIR /tmp
-RUN curl -fsSL https://curl.se/download/curl-7.58.0.tar.gz | tar xz
-RUN cd curl-7.58.0 && ./configure --host=aarch64-linux-gnu --prefix=${SYSROOT}/usr \
-      --with-ssl=${SYSROOT}/usr --with-zlib=${SYSROOT}/usr \
-      --without-libssh2 --without-librtmp --without-nghttp2 --without-libidn2 --without-libpsl \
-      --disable-ldap --disable-ldaps --disable-rtsp --disable-dict --disable-telnet \
-      --disable-tftp --disable-pop3 --disable-imap --disable-smb --disable-smtp \
-      --disable-gopher --disable-manual \
-      CFLAGS="--sysroot=${SYSROOT}" LDFLAGS="--sysroot=${SYSROOT} -L${SYSROOT}/usr/lib/aarch64-linux-gnu" \
-    && make -j$(nproc) && make install && rm -rf /tmp/curl-7.58.0
-
-# Download Azure IoT SDK arm64 packages from PPA (all dependencies)
-ENV PPA_BASE=http://ppa.launchpad.net/aziotsdklinux/ppa-azureiot/ubuntu/pool/main
-RUN mkdir -p /tmp/azuresdk && cd /tmp/azuresdk && \
-    curl -fsSLO ${PPA_BASE}/a/azure-macro-utils-c/azure-macro-utils-c-dev_0.2.0.0-11bionic_arm64.deb && \
-    curl -fsSLO ${PPA_BASE}/a/azure-macro-utils-c/azure-macro-utils-c-lib_0.2.0.0-11bionic_arm64.deb && \
-    curl -fsSLO ${PPA_BASE}/u/umock-c/umock-c-dev_0.2.0.0-11bionic_arm64.deb && \
-    curl -fsSLO ${PPA_BASE}/u/umock-c/umock-c-lib_0.2.0.0-11bionic_arm64.deb && \
-    curl -fsSLO ${PPA_BASE}/a/azure-c-shared-util/azure-c-shared-util-dev_0.2.0.0-24bionic_arm64.deb && \
-    curl -fsSLO ${PPA_BASE}/a/azure-c-shared-util/azure-c-shared-util-lib_0.2.0.0-24bionic_arm64.deb && \
-    curl -fsSLO ${PPA_BASE}/a/azure-uamqp-c/azure-uamqp-c-dev_0.2.0.0-24bionic_arm64.deb && \
-    curl -fsSLO ${PPA_BASE}/a/azure-uamqp-c/azure-uamqp-c-lib_0.2.0.0-24bionic_arm64.deb && \
-    curl -fsSLO ${PPA_BASE}/a/azure-umqtt-c/azure-umqtt-c-dev_0.2.0.0-24bionic_arm64.deb && \
-    curl -fsSLO ${PPA_BASE}/a/azure-umqtt-c/azure-umqtt-c-lib_0.2.0.0-24bionic_arm64.deb && \
-    curl -fsSLO ${PPA_BASE}/a/azure-iot-sdk-c/azure-iot-sdk-c-dev_0.2.0.0-24bionic_arm64.deb && \
-    curl -fsSLO ${PPA_BASE}/a/azure-iot-sdk-c/azure-iot-sdk-c-lib_0.2.0.0-24bionic_arm64.deb && \
+# Download Azure IoT SDK arm64 packages from PPA using apt-get download
+RUN echo "deb [arch=arm64 trusted=yes] http://ppa.launchpad.net/aziotsdklinux/ppa-azureiot/ubuntu bionic main" > /etc/apt/sources.list.d/azureiot.list && \
+    apt-get update && \
+    mkdir -p /tmp/azuresdk && cd /tmp/azuresdk && \
+    apt-get download \
+        azure-macro-utils-c-dev:arm64 azure-macro-utils-c-lib:arm64 \
+        umock-c-dev:arm64 umock-c-lib:arm64 \
+        azure-c-shared-util-dev:arm64 azure-c-shared-util-lib:arm64 \
+        azure-uamqp-c-dev:arm64 azure-uamqp-c-lib:arm64 \
+        azure-umqtt-c-dev:arm64 azure-umqtt-c-lib:arm64 \
+        azure-iot-sdk-c-dev:arm64 azure-iot-sdk-c-lib:arm64 && \
     for d in *.deb; do dpkg-deb -x "$d" ${SYSROOT}; done && \
-    rm -rf /tmp/azuresdk
+    rm -rf /tmp/azuresdk /var/lib/apt/lists/*
+
+# Pre-extract runtime-only libraries (no -dev packages) for module Dockerfiles to copy
+# This avoids re-downloading in every module build
+ENV RUNTIME_ROOTFS=/opt/arm64-runtime
+RUN mkdir -p /tmp/runtime-debs ${RUNTIME_ROOTFS} && cd /tmp/runtime-debs && \
+    apt-get update && \
+    apt-get -o APT::Architecture=arm64 -o APT::Architectures="arm64,all" download \
+        libssl1.1:arm64 libuuid1:arm64 zlib1g:arm64 openssl:arm64 ca-certificates:all \
+        libcurl4:arm64 libnghttp2-14:arm64 librtmp1:arm64 \
+        libldap-2.4-2:arm64 libldap-common:all \
+        libgssapi-krb5-2:arm64 libkrb5-3:arm64 libk5crypto3:arm64 libkrb5support0:arm64 \
+        libgssapi3-heimdal:arm64 libkrb5-26-heimdal:arm64 libasn1-8-heimdal:arm64 \
+        libhcrypto4-heimdal:arm64 libheimbase1-heimdal:arm64 libheimntlm0-heimdal:arm64 \
+        libhx509-5-heimdal:arm64 libwind0-heimdal:arm64 libroken18-heimdal:arm64 \
+        libsqlite3-0:arm64 \
+        libpsl5:arm64 libidn2-0:arm64 libunistring2:arm64 \
+        libsasl2-2:arm64 \
+        libgnutls30:arm64 libgmp10:arm64 libnettle6:arm64 libhogweed4:arm64 libtasn1-6:arm64 libp11-kit0:arm64 libffi6:arm64 libkeyutils1:arm64 && \
+    for d in *.deb; do dpkg-deb -x "$d" ${RUNTIME_ROOTFS}; done && \
+    rm -rf /tmp/runtime-debs /var/lib/apt/lists/*
 
 WORKDIR /app

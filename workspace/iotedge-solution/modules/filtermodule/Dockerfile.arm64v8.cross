@@ -1,0 +1,24 @@
+# syntax=docker/dockerfile:1.4
+# Uses shared SDK base image - build it first:
+#   docker build -f ../../Dockerfile.sdk-arm64 -t iotedge-sdk-arm64:latest ../..
+ARG SDK_IMAGE=iotedge-sdk-arm64:latest
+ARG TARGETPLATFORM=linux/arm64/v8
+
+# Build stage - uses pre-built SDK image (includes pre-extracted runtime libs)
+FROM ${SDK_IMAGE} AS build
+WORKDIR /app
+COPY . .
+RUN cmake -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+          -DCMAKE_C_COMPILER=${CC} -DCMAKE_CXX_COMPILER=${CXX} \
+          -DCMAKE_SYSROOT=${SYSROOT} \
+          -DCMAKE_FIND_ROOT_PATH=${SYSROOT} \
+          -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY . \
+    && make -j$(nproc)
+
+# Runtime stage (runs on arm64 device) - NO QEMU needed
+FROM --platform=$TARGETPLATFORM arm64v8/ubuntu:bionic
+WORKDIR /app
+# Copy pre-extracted runtime dependencies from SDK (includes full libcurl)
+COPY --from=build /opt/arm64-runtime/ /
+COPY --from=build /app/main ./main
+CMD ["./main"]

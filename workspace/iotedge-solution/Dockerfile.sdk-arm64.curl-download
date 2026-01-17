@@ -18,42 +18,33 @@ RUN mkdir -p ${SYSROOT} && \
     curl -fsSL https://partner-images.canonical.com/core/bionic/current/ubuntu-bionic-core-cloudimg-arm64-root.tar.gz | tar xz -C ${SYSROOT}
 
 # Download arm64 runtime libraries from Ubuntu ports INCLUDING libcurl and all dependencies
-RUN mkdir -p /tmp/debs && cd /tmp/debs && \
-    # OpenSSL
-    curl -fsSLO http://ports.ubuntu.com/pool/main/o/openssl/libssl-dev_1.1.1-1ubuntu2.1~18.04.23_arm64.deb && \
-    curl -fsSLO http://ports.ubuntu.com/pool/main/o/openssl/libssl1.1_1.1.1-1ubuntu2.1~18.04.23_arm64.deb && \
-    # UUID
-    curl -fsSLO http://ports.ubuntu.com/pool/main/u/util-linux/uuid-dev_2.31.1-0.4ubuntu3.7_arm64.deb && \
-    curl -fsSLO http://ports.ubuntu.com/pool/main/u/util-linux/libuuid1_2.31.1-0.4ubuntu3.7_arm64.deb && \
-    # Zlib
-    curl -fsSLO http://ports.ubuntu.com/pool/main/z/zlib/zlib1g-dev_1.2.11.dfsg-0ubuntu2.2_arm64.deb && \
-    curl -fsSLO http://ports.ubuntu.com/pool/main/z/zlib/zlib1g_1.2.11.dfsg-0ubuntu2.2_arm64.deb && \
-    # curl and dependencies
-    curl -fsSLO http://ports.ubuntu.com/pool/main/c/curl/libcurl4_7.58.0-2ubuntu3.24_arm64.deb && \
-    curl -fsSLO http://ports.ubuntu.com/pool/main/c/curl/libcurl4-openssl-dev_7.58.0-2ubuntu3.24_arm64.deb && \
-    # curl dependencies: nghttp2, rtmp, ldap, gssapi, psl, idn
-    curl -fsSLO http://ports.ubuntu.com/pool/main/n/nghttp2/libnghttp2-14_1.30.0-1ubuntu1_arm64.deb && \
-    curl -fsSLO http://ports.ubuntu.com/pool/main/n/nghttp2/libnghttp2-dev_1.30.0-1ubuntu1_arm64.deb && \
-    curl -fsSLO http://ports.ubuntu.com/pool/main/r/rtmpdump/librtmp1_2.4+20151223.gitfa8646d.1-1_arm64.deb && \
-    curl -fsSLO http://ports.ubuntu.com/pool/main/o/openldap/libldap-2.4-2_2.4.45+dfsg-1ubuntu1.11_arm64.deb && \
-    curl -fsSLO http://ports.ubuntu.com/pool/main/o/openldap/libldap-common_2.4.45+dfsg-1ubuntu1.11_all.deb && \
-    curl -fsSLO http://ports.ubuntu.com/pool/main/k/krb5/libgssapi-krb5-2_1.16-2ubuntu0.4_arm64.deb && \
-    curl -fsSLO http://ports.ubuntu.com/pool/main/k/krb5/libkrb5-3_1.16-2ubuntu0.4_arm64.deb && \
-    curl -fsSLO http://ports.ubuntu.com/pool/main/k/krb5/libk5crypto3_1.16-2ubuntu0.4_arm64.deb && \
-    curl -fsSLO http://ports.ubuntu.com/pool/main/k/krb5/libkrb5support0_1.16-2ubuntu0.4_arm64.deb && \
-    curl -fsSLO http://ports.ubuntu.com/pool/main/libp/libpsl/libpsl5_0.19.1-5build1_arm64.deb && \
-    curl -fsSLO http://ports.ubuntu.com/pool/main/libi/libidn2/libidn2-0_2.0.4-1.1ubuntu0.2_arm64.deb && \
-    curl -fsSLO http://ports.ubuntu.com/pool/main/libu/libunistring/libunistring2_0.9.9-0ubuntu1_arm64.deb && \
-    curl -fsSLO http://ports.ubuntu.com/pool/main/s/sasl2/libsasl2-2_2.1.27~101-g0780600+dfsg-3ubuntu2.4_arm64.deb && \
-    curl -fsSLO http://ports.ubuntu.com/pool/main/g/gnutls28/libgnutls30_3.5.18-1ubuntu1.6_arm64.deb && \
-    curl -fsSLO http://ports.ubuntu.com/pool/main/g/gmp/libgmp10_6.1.2+dfsg-2_arm64.deb && \
-    curl -fsSLO http://ports.ubuntu.com/pool/main/n/nettle/libnettle6_3.4-1ubuntu0.1_arm64.deb && \
-    curl -fsSLO http://ports.ubuntu.com/pool/main/n/nettle/libhogweed4_3.4-1ubuntu0.1_arm64.deb && \
-    curl -fsSLO http://ports.ubuntu.com/pool/main/libt/libtasn1-6/libtasn1-6_4.13-2_arm64.deb && \
-    curl -fsSLO http://ports.ubuntu.com/pool/main/p/p11-kit/libp11-kit0_0.23.9-2ubuntu0.1_arm64.deb && \
-    curl -fsSLO http://ports.ubuntu.com/pool/main/libf/libffi/libffi6_3.2.1-8_arm64.deb && \
-    curl -fsSLO http://ports.ubuntu.com/pool/main/k/keyutils/libkeyutils1_1.5.9-9.2ubuntu2.1_arm64.deb && \
-    for d in *.deb; do dpkg-deb -x "$d" ${SYSROOT}; done && rm -rf /tmp/debs
+# Add arm64 ports sources so apt can find foreign-arch packages, then download current versions
+RUN dpkg --add-architecture arm64 && \
+    sed -Ei 's/^deb /deb [arch=amd64] /' /etc/apt/sources.list && \
+    printf "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports bionic main restricted universe multiverse\n" \
+        "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports bionic-updates main restricted universe multiverse\n" \
+        "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports bionic-security main restricted universe multiverse\n" \
+        > /etc/apt/sources.list.d/arm64.list && \
+    apt-get update && \
+    mkdir -p /tmp/debs && cd /tmp/debs && \
+    apt-get download \
+        libssl-dev:arm64 libssl1.1:arm64 \
+        uuid-dev:arm64 libuuid1:arm64 \
+        zlib1g-dev:arm64 zlib1g:arm64 \
+        libcurl4:arm64 libcurl4-openssl-dev:arm64 \
+        libnghttp2-14:arm64 libnghttp2-dev:arm64 \
+        librtmp1:arm64 \
+        libldap-2.4-2:arm64 libldap-common \
+        libgssapi-krb5-2:arm64 libkrb5-3:arm64 libk5crypto3:arm64 libkrb5support0:arm64 \
+        libgssapi3-heimdal:arm64 libkrb5-26-heimdal:arm64 libasn1-8-heimdal:arm64 \
+        libhcrypto4-heimdal:arm64 libheimbase1-heimdal:arm64 libheimntlm0-heimdal:arm64 \
+        libhx509-5-heimdal:arm64 libwind0-heimdal:arm64 libroken18-heimdal:arm64 \
+        libsqlite3-0:arm64 \
+        libpsl5:arm64 libidn2-0:arm64 libunistring2:arm64 \
+        libsasl2-2:arm64 \
+        libgnutls30:arm64 libgmp10:arm64 libnettle6:arm64 libhogweed4:arm64 libtasn1-6:arm64 libp11-kit0:arm64 libffi6:arm64 libkeyutils1:arm64 && \
+    for d in *.deb; do dpkg-deb -x "$d" ${SYSROOT}; done && rm -rf /tmp/debs && \
+    rm -rf /var/lib/apt/lists/*
 
 # Download Azure IoT SDK arm64 packages from PPA (all dependencies)
 ENV PPA_BASE=http://ppa.launchpad.net/aziotsdklinux/ppa-azureiot/ubuntu/pool/main

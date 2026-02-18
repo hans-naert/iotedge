@@ -26,7 +26,26 @@ docker-compose run --rm iotedge-dev iotedgedev solution init --template c
     - CONTAINER_REGISTRY_ADDRESS="\<your-registry-address\>"
 - set the default platform to arm64v8: DEFAULT_PLATFORM="arm64v8"
 - set deployment target: IOTHUB_DEPLOYMENT_TARGET_CONDITION="deviceId='\<your-device-id\>'"
+- set edge runtime version: EDGE_RUNTIME_VERSION="1.5"
 
+### Edit deployment.template.json and deployment.debug.template.json files
+- update edgeAgent and edgeHub image versions to use $EDGE_RUNTIME_VERSION environment variable:
+```json
+  "image": "mcr.microsoft.com/azureiotedge-agent:$EDGE_RUNTIME_VERSION",
+```
+and
+```json
+  "image": "mcr.microsoft.com/azureiotedge-hub:$EDGE_RUNTIME_VERSION",
+  ```
+- update the registryCredentials section with the container registry settings from the .env file
+```json
+registryCredentials": {
+              "cr": {
+                "username": "$CONTAINER_REGISTRY_USERNAME",
+                "password": "$CONTAINER_REGISTRY_PASSWORD",
+                "address": "$CONTAINER_REGISTRY_SERVER"
+              }
+```
 
 ### Add module
 ```powershell

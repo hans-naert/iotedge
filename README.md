@@ -4,15 +4,34 @@ This workspace uses a Docker container to run `iotedgedev` commands with the pro
 
 The docker container of Microsoft is used. For more information check [Microsoft Learn: Tutorial – Develop IoT Edge modules using Visual Studio Code](https://learn.microsoft.com/en-us/azure/iot-edge/tutorial-develop-for-linux?view=iotedge-1.4&tabs=c&pivots=iotedge-dev-cli)
 
+For general information, see the **docker-microsoft branch**.
+
+---
+
+## Why is the build so slow?
+
+The default build runs in a QEMU virtual machine. This is necessary because ARM instructions need to be generated on an x86/x64 development environment. QEMU emulates an ARM processor, but this is very slow.
+
+**Solution: Cross-compilation**
+
+Cross-compilation uses an x86 compiler that directly generates ARM instructions, without emulation. This makes the build much faster (minutes instead of hours).
+
 ---
 
 ## Cross-Compilation for ARM64 (Recommended)
 
 This method builds arm64 images **on your x64 development machine** without QEMU emulation during build, resulting in fast native-speed compilation.
 
+### Required Files
+
+- **Dockerfile.sdk-arm64**: Generates a container with a cross-compiler toolchain
+- **Dockerfile.arm64v8.cross**: Place this file in each module folder
+- **module.json**: Update with: `"arm64v8": "./Dockerfile.arm64v8.cross"`
+- **CMakeLists.txt**: Use the modified CMakeLists.txt in the module folder
+
 ### Step 1: Build the SDK Image (once)
 
-The SDK image contains the cross-compiler toolchain, arm64 sysroot, and all dependencies. Build it once and reuse for all modules:
+The SDK image contains the cross-compiler toolchain, arm64 sysroot, and all dependencies. Build it **once** and reuse for all modules:
 
 ```powershell
 cd workspace/iotedge-solution
@@ -24,9 +43,24 @@ This creates:
 - `/opt/arm64-runtime` — runtime-only libraries for the final image
 - Cross-compiler: `aarch64-linux-gnu-gcc`
 
-### Step 2: Build Module Images
+### Step 2: Configure Module
 
-Each module has a `Dockerfile.arm64v8.cross` that uses the SDK image:
+For each module:
+1. Place `Dockerfile.arm64v8.cross` in the module folder
+2. Update `module.json`: add or change: `"arm64v8": "./Dockerfile.arm64v8.cross"`
+3. Use the modified `CMakeLists.txt`
+
+### Step 3: Build Module Images
+
+**Preferred: via iotedgedev** (if you configured module.json correctly with `"arm64v8": "./Dockerfile.arm64v8.cross"`):
+```powershell
+cd workspace/iotedge-solution
+docker-compose run --rm iotedge-dev iotedgedev solution build
+```
+
+**Alternative: direct docker commands**
+
+Each module now has a `Dockerfile.arm64v8.cross` that uses the SDK image:
 
 ```powershell
 # Build filtermodule
@@ -38,24 +72,15 @@ cd workspace/iotedge-solution/modules/module_student
 docker build -f Dockerfile.arm64v8.cross -t module_student:arm64 .
 ```
 
-### Step 3: Verify with QEMU (Optional)
+### Step 4: Push to Container Registry
 
-Test the arm64 image on your x64 laptop using QEMU emulation:
-
+**Preferred: via iotedgedev**:
 ```powershell
-# Enable QEMU emulation (run once after Docker restart)
-docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-
-# Verify architecture
-docker run --rm --platform linux/arm64 filtermodule:arm64 uname -m
-# Expected output: aarch64
-
-# Test the module binary (will fail without IoT Edge runtime, but proves it runs)
-docker run --rm --platform linux/arm64 filtermodule:arm64 ./main
-# Expected: "Environment IOTEDGE_AUTHSCHEME not set" error = binary works!
+cd workspace/iotedge-solution
+docker-compose run --rm iotedge-dev iotedgedev push
 ```
 
-### Step 4: Push to Container Registry
+**Alternative: direct docker commands**
 
 ```powershell
 # Tag for your registry
@@ -63,64 +88,40 @@ docker tag filtermodule:arm64 <your-registry>/filtermodule:arm64
 docker push <your-registry>/filtermodule:arm64
 ```
 
----
+**Note: Cleaning up old images on Raspberry Pi**
 
-## Using iotedgedev Container (Alternative)
+If you updated existing modules, remove old images on the device to force pulling new versions:
 
-This method uses Microsoft's iotedgedev container with QEMU for arm64 builds.
-
-### Build and start the container
-```powershell
-docker-compose up -d --build
+```bash
+# On the Raspberry Pi
+sudo iotedge system stop
+sudo docker rm -f $(docker ps -aq)  # Remove all containers
+sudo docker rmi <image-name>         # Remove specific old image
+sudo iotedge system restart
 ```
 
-**Note:** The `docker-compose.yml` file configures:
-- Docker-in-Docker support via Docker socket mounting
-- Persistent workspace folder (`./workspace` → `/workspace` in container)
-- Interactive terminal access
+### Step 5: Deploy to IoT Edge Device
 
-### Initialize IoT Edge solution
+Deploy the modules to your IoT Edge device. This is needed when:
+- Version numbers are changed in module.json
+- New modules are added or removed
+- Module configuration is updated
+- Initial deployment
+
+**Preferred: via iotedgedev**:
 ```powershell
-docker-compose run --rm iotedge-dev iotedgedev solution init --template c
+cd workspace/iotedge-solution
+docker-compose run --rm iotedge-dev iotedgedev deploy
 ```
 
-### Edit .env file
-- update the container registry settings:
-    - CONTAINER_REGISTRY_USERNAME="\<your-registry-username\>"
-    - CONTAINER_REGISTRY_PASSWORD="\<your-registry-password\>"
-    - CONTAINER_REGISTRY_ADDRESS="\<your-registry-address\>"
-- set the default platform to arm64v8: DEFAULT_PLATFORM="arm64v8"
-- set deployment target: IOTHUB_DEPLOYMENT_TARGET_CONDITION="deviceId='\<your-device-id\>'"
+**Alternative: Azure Portal (GUI)**
+1. Navigate to Azure Portal → IoT Hub → IoT Edge
+2. Select your device
+3. Click "Set modules"
+4. Add or update module images
+5. Review and create deployment
 
-
-### Add module
+**Alternative: Azure CLI**
 ```powershell
-docker-compose run --rm iotedge-dev iotedgedev solution add -t c <module-name>
-```
-
-### Build the module image
-```powershell
-docker-compose run --rm iotedge-dev iotedgedev solution build
-```
-
-### Push the module image
-```powershell
-docker-compose run --rm iotedge-dev iotedgedev solution push
-```
-
-### Publish the deployment to IoT Hub
-```powershell
-docker-compose run --rm iotedge-dev iotedgedev iothub deploy -p 1 -n <name of deployment>
-```
-
-### Optional
-
-#### Access interactive shell
-```powershell
-docker-compose exec iotedge-dev bash
-```
-
-#### Stop and remove the container
-```powershell
-docker-compose down
+az iot edge set-modules --device-id <device-id> --hub-name <hub-name> --content deployment.template.json
 ```

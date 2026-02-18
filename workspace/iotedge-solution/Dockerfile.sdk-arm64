@@ -1,83 +1,46 @@
 # Shared cross-compilation base image for arm64 IoT Edge C modules
-# Alternative version: downloads pre-built curl packages (faster but more dependencies)
-# Build once: docker build -f Dockerfile.sdk-arm64.curl-download -t iotedge-sdk-arm64:latest .
+# Uses vcpkg for modern Azure IoT SDK (replaces old 2021 PPA packages)
+# Build once: docker build -f Dockerfile.sdk-arm64 -t iotedge-sdk-arm64:latest .
 # syntax=docker/dockerfile:1.4
-FROM ubuntu:18.04
+FROM debian:12
 ENV DEBIAN_FRONTEND=noninteractive
 ENV SYSROOT=/opt/arm64-rootfs
 ENV CC=aarch64-linux-gnu-gcc
 ENV CXX=aarch64-linux-gnu-g++
 
-# Install cross-compilation toolchain
+# Install cross-compilation toolchain and vcpkg dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc-aarch64-linux-gnu g++-aarch64-linux-gnu cmake make curl ca-certificates \
+    git pkg-config zip unzip tar xz-utils ninja-build \
     && rm -rf /var/lib/apt/lists/*
 
-# Get arm64 rootfs from Ubuntu bionic (matching PPA packages)
-RUN mkdir -p ${SYSROOT} && \
-    curl -fsSL https://partner-images.canonical.com/core/bionic/current/ubuntu-bionic-core-cloudimg-arm64-root.tar.gz | tar xz -C ${SYSROOT}
-
-# Download arm64 runtime libraries from Ubuntu ports INCLUDING libcurl and all dependencies
-# Add arm64 ports sources so apt can find foreign-arch packages, then download current versions
-RUN dpkg --add-architecture arm64 && \
-    sed -Ei 's/^deb /deb [arch=amd64] /' /etc/apt/sources.list && \
-    printf "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports bionic main restricted universe multiverse\n" \
-        "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports bionic-updates main restricted universe multiverse\n" \
-        "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports bionic-security main restricted universe multiverse\n" \
-        > /etc/apt/sources.list.d/arm64.list && \
-    apt-get update && \
-    mkdir -p /tmp/debs && cd /tmp/debs && \
-    apt-get download \
-        libssl-dev:arm64 libssl1.1:arm64 \
-        uuid-dev:arm64 libuuid1:arm64 \
-        zlib1g-dev:arm64 zlib1g:arm64 \
-        libcurl4:arm64 libcurl4-openssl-dev:arm64 \
-        libnghttp2-14:arm64 libnghttp2-dev:arm64 \
-        librtmp1:arm64 \
-        libldap-2.4-2:arm64 libldap-common \
-        libgssapi-krb5-2:arm64 libkrb5-3:arm64 libk5crypto3:arm64 libkrb5support0:arm64 \
-        libgssapi3-heimdal:arm64 libkrb5-26-heimdal:arm64 libasn1-8-heimdal:arm64 \
-        libhcrypto4-heimdal:arm64 libheimbase1-heimdal:arm64 libheimntlm0-heimdal:arm64 \
-        libhx509-5-heimdal:arm64 libwind0-heimdal:arm64 libroken18-heimdal:arm64 \
-        libsqlite3-0:arm64 \
-        libpsl5:arm64 libidn2-0:arm64 libunistring2:arm64 \
-        libsasl2-2:arm64 \
-        libgnutls30:arm64 libgmp10:arm64 libnettle6:arm64 libhogweed4:arm64 libtasn1-6:arm64 libp11-kit0:arm64 libffi6:arm64 libkeyutils1:arm64 && \
-    for d in *.deb; do dpkg-deb -x "$d" ${SYSROOT}; done && rm -rf /tmp/debs && \
+# Get arm64 rootfs from Debian 12 using debootstrap
+RUN apt-get update && apt-get install -y --no-install-recommends debootstrap && \
+    debootstrap --arch=arm64 --variant=minbase --include=ca-certificates bookworm ${SYSROOT} http://deb.debian.org/debian && \
     rm -rf /var/lib/apt/lists/*
 
-# Download Azure IoT SDK arm64 packages from PPA using apt-get download
-RUN echo "deb [arch=arm64 trusted=yes] http://ppa.launchpad.net/aziotsdklinux/ppa-azureiot/ubuntu bionic main" > /etc/apt/sources.list.d/azureiot.list && \
-    apt-get update && \
-    mkdir -p /tmp/azuresdk && cd /tmp/azuresdk && \
-    apt-get download \
-        azure-macro-utils-c-dev:arm64 azure-macro-utils-c-lib:arm64 \
-        umock-c-dev:arm64 umock-c-lib:arm64 \
-        azure-c-shared-util-dev:arm64 azure-c-shared-util-lib:arm64 \
-        azure-uamqp-c-dev:arm64 azure-uamqp-c-lib:arm64 \
-        azure-umqtt-c-dev:arm64 azure-umqtt-c-lib:arm64 \
-        azure-iot-sdk-c-dev:arm64 azure-iot-sdk-c-lib:arm64 && \
-    for d in *.deb; do dpkg-deb -x "$d" ${SYSROOT}; done && \
-    rm -rf /tmp/azuresdk /var/lib/apt/lists/*
+# Install Azure IoT SDK using vcpkg (builds all dependencies: curl, openssl, zlib, etc.)
+RUN git clone --depth 1 https://github.com/microsoft/vcpkg.git /opt/vcpkg && \
+    /opt/vcpkg/bootstrap-vcpkg.sh -disableMetrics
 
-# Pre-extract runtime-only libraries (no -dev packages) for module Dockerfiles to copy
-# This avoids re-downloading in every module build
-ENV RUNTIME_ROOTFS=/opt/arm64-runtime
-RUN mkdir -p /tmp/runtime-debs ${RUNTIME_ROOTFS} && cd /tmp/runtime-debs && \
-    apt-get update && \
-    apt-get -o APT::Architecture=arm64 -o APT::Architectures="arm64,all" download \
-        libssl1.1:arm64 libuuid1:arm64 zlib1g:arm64 openssl:arm64 ca-certificates:all \
-        libcurl4:arm64 libnghttp2-14:arm64 librtmp1:arm64 \
-        libldap-2.4-2:arm64 libldap-common:all \
-        libgssapi-krb5-2:arm64 libkrb5-3:arm64 libk5crypto3:arm64 libkrb5support0:arm64 \
-        libgssapi3-heimdal:arm64 libkrb5-26-heimdal:arm64 libasn1-8-heimdal:arm64 \
-        libhcrypto4-heimdal:arm64 libheimbase1-heimdal:arm64 libheimntlm0-heimdal:arm64 \
-        libhx509-5-heimdal:arm64 libwind0-heimdal:arm64 libroken18-heimdal:arm64 \
-        libsqlite3-0:arm64 \
-        libpsl5:arm64 libidn2-0:arm64 libunistring2:arm64 \
-        libsasl2-2:arm64 \
-        libgnutls30:arm64 libgmp10:arm64 libnettle6:arm64 libhogweed4:arm64 libtasn1-6:arm64 libp11-kit0:arm64 libffi6:arm64 libkeyutils1:arm64 && \
-    for d in *.deb; do dpkg-deb -x "$d" ${RUNTIME_ROOTFS}; done && \
-    rm -rf /tmp/runtime-debs /var/lib/apt/lists/*
+# Configure vcpkg for arm64 cross-compilation
+ENV VCPKG_ROOT=/opt/vcpkg
+ENV VCPKG_DEFAULT_TRIPLET=arm64-linux
+
+# Create CMake toolchain file for cross-compilation
+RUN echo 'set(CMAKE_SYSTEM_NAME Linux)' > /opt/arm64-toolchain.cmake && \
+    echo 'set(CMAKE_SYSTEM_PROCESSOR aarch64)' >> /opt/arm64-toolchain.cmake && \
+    echo 'set(CMAKE_C_COMPILER aarch64-linux-gnu-gcc)' >> /opt/arm64-toolchain.cmake && \
+    echo 'set(CMAKE_CXX_COMPILER aarch64-linux-gnu-g++)' >> /opt/arm64-toolchain.cmake && \
+    echo "set(CMAKE_SYSROOT ${SYSROOT})" >> /opt/arm64-toolchain.cmake && \
+    echo "set(CMAKE_FIND_ROOT_PATH ${SYSROOT})" >> /opt/arm64-toolchain.cmake && \
+    echo 'set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)' >> /opt/arm64-toolchain.cmake && \
+    echo 'set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)' >> /opt/arm64-toolchain.cmake && \
+    echo 'set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)' >> /opt/arm64-toolchain.cmake
+
+# Install Azure IoT SDK C for arm64
+RUN /opt/vcpkg/vcpkg install azure-iot-sdk-c:arm64-linux libuuid:arm64-linux && \
+    cp -r /opt/vcpkg/installed/arm64-linux/* ${SYSROOT}/usr/ && \
+    rm -rf /opt/vcpkg/buildtrees /opt/vcpkg/downloads /opt/vcpkg/packages
 
 WORKDIR /app

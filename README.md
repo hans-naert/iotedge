@@ -39,11 +39,20 @@ and
   ```
 - update the registryCredentials section with the container registry settings from the .env file
 ```json
-registryCredentials": {
+"registryCredentials": {
               "cr": {
                 "username": "$CONTAINER_REGISTRY_USERNAME",
                 "password": "$CONTAINER_REGISTRY_PASSWORD",
                 "address": "$CONTAINER_REGISTRY_SERVER"
+              }
+}
+```
+- if module needs to access the devices of the host, add the "createOptions" with "Privileged" set to true in the module settings:
+```json
+"createOptions": {
+                "HostConfig": {
+                   "Privileged": true
+                }
               }
 ```
 
@@ -60,6 +69,18 @@ docker-compose run --rm iotedge-dev iotedgedev solution build
 ### Push the module image
 ```powershell
 docker-compose run --rm iotedge-dev iotedgedev solution push
+```
+
+**Note: Cleaning up old images on Raspberry Pi**
+
+If you updated existing modules, remove old images on the device to force pulling new versions:
+
+```bash
+# On the Raspberry Pi
+sudo iotedge system stop
+sudo docker rm -f $(docker ps -aq)  # Remove all containers
+sudo docker rmi <image-name>         # Remove specific old image
+sudo iotedge system restart
 ```
 
 ### Publish the deployment to IoT Hub

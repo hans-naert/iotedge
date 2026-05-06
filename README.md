@@ -31,6 +31,11 @@ This method builds arm64 images **on your x64 development machine** without QEMU
 
 ### Step 1: Build the SDK Image (once)
 
+Install the QEMU emulator
+```powershell
+docker run --privileged --rm tonistiigi/binfmt --install arm64
+```
+
 The SDK image contains the cross-compiler toolchain, arm64 sysroot, and all dependencies. Build it **once** and reuse for all modules:
 
 ```powershell

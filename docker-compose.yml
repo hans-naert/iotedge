@@ -8,3 +8,4 @@ services:
     working_dir: /workspace/iotedge-solution
     environment:
       - DOCKER_BUILDKIT=1
+      - AZURE_EXTENSION_DIR=/home/iotedgedev/.azure/cliextensions

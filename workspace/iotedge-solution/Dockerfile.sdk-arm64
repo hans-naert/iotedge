@@ -1,46 +1,47 @@
-# Shared cross-compilation base image for arm64 IoT Edge C modules
-# Uses vcpkg for modern Azure IoT SDK (replaces old 2021 PPA packages)
-# Build once: docker build -f Dockerfile.sdk-arm64 -t iotedge-sdk-arm64:latest .
-# syntax=docker/dockerfile:1.4
 FROM debian:12
 ENV DEBIAN_FRONTEND=noninteractive
-ENV SYSROOT=/opt/arm64-rootfs
-ENV CC=aarch64-linux-gnu-gcc
-ENV CXX=aarch64-linux-gnu-g++
 
-# Install cross-compilation toolchain and vcpkg dependencies
+# 1. Installeer zowel native build tools (voor de x64 host tools) als de aarch64 cross-compilers
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc-aarch64-linux-gnu g++-aarch64-linux-gnu cmake make curl ca-certificates \
-    git pkg-config zip unzip tar xz-utils ninja-build \
+    build-essential \
+    gcc-aarch64-linux-gnu \
+    g++-aarch64-linux-gnu \
+    cmake \
+    ninja-build \
+    make \
+    curl \
+    ca-certificates \
+    git \
+    pkg-config \
+    zip \
+    unzip \
+    tar \
+    bison \
+    flex \
     && rm -rf /var/lib/apt/lists/*
 
-# Get arm64 rootfs from Debian 12 using debootstrap
-RUN apt-get update && apt-get install -y --no-install-recommends debootstrap && \
-    debootstrap --arch=arm64 --variant=minbase --include=ca-certificates bookworm ${SYSROOT} http://deb.debian.org/debian && \
-    rm -rf /var/lib/apt/lists/*
-
-# Install Azure IoT SDK using vcpkg (builds all dependencies: curl, openssl, zlib, etc.)
-RUN git clone --depth 1 https://github.com/microsoft/vcpkg.git /opt/vcpkg && \
-    /opt/vcpkg/bootstrap-vcpkg.sh -disableMetrics
-
-# Configure vcpkg for arm64 cross-compilation
+# 2. Vcpkg ophalen en bootstrap uitvoeren
 ENV VCPKG_ROOT=/opt/vcpkg
-ENV VCPKG_DEFAULT_TRIPLET=arm64-linux
+ENV VCPKG_FORCE_SYSTEM_BINARIES=1
+RUN git clone --depth 1 https://github.com/microsoft/vcpkg.git ${VCPKG_ROOT} && \
+    ${VCPKG_ROOT}/bootstrap-vcpkg.sh -disableMetrics
 
-# Create CMake toolchain file for cross-compilation
-RUN echo 'set(CMAKE_SYSTEM_NAME Linux)' > /opt/arm64-toolchain.cmake && \
-    echo 'set(CMAKE_SYSTEM_PROCESSOR aarch64)' >> /opt/arm64-toolchain.cmake && \
-    echo 'set(CMAKE_C_COMPILER aarch64-linux-gnu-gcc)' >> /opt/arm64-toolchain.cmake && \
-    echo 'set(CMAKE_CXX_COMPILER aarch64-linux-gnu-g++)' >> /opt/arm64-toolchain.cmake && \
-    echo "set(CMAKE_SYSROOT ${SYSROOT})" >> /opt/arm64-toolchain.cmake && \
-    echo "set(CMAKE_FIND_ROOT_PATH ${SYSROOT})" >> /opt/arm64-toolchain.cmake && \
-    echo 'set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)' >> /opt/arm64-toolchain.cmake && \
-    echo 'set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)' >> /opt/arm64-toolchain.cmake && \
-    echo 'set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)' >> /opt/arm64-toolchain.cmake
+# 3. Definieer het CMake toolchain bestand voor ARM64 cross-compilatie
+RUN printf "set(CMAKE_SYSTEM_NAME Linux)\n\
+set(CMAKE_SYSTEM_PROCESSOR aarch64)\n\
+set(CMAKE_C_COMPILER aarch64-linux-gnu-gcc)\n\
+set(CMAKE_CXX_COMPILER aarch64-linux-gnu-g++)\n" > /opt/toolchain-arm64.cmake
 
-# Install Azure IoT SDK C for arm64
-RUN /opt/vcpkg/vcpkg install azure-iot-sdk-c:arm64-linux libuuid:arm64-linux && \
-    cp -r /opt/vcpkg/installed/arm64-linux/* ${SYSROOT}/usr/ && \
-    rm -rf /opt/vcpkg/buildtrees /opt/vcpkg/downloads /opt/vcpkg/packages
+# 4. Koppel de cross-toolchain aan het arm64-linux community triplet van vcpkg
+RUN mkdir -p ${VCPKG_ROOT}/triplets/community && \
+    printf "set(VCPKG_TARGET_ARCHITECTURE arm64)\n\
+set(VCPKG_CRT_LINKAGE dynamic)\n\
+set(VCPKG_LIBRARY_LINKAGE dynamic)\n\
+set(VCPKG_CMAKE_SYSTEM_NAME Linux)\n\
+set(VCPKG_CHAINLOAD_TOOLCHAIN_FILE /opt/toolchain-arm64.cmake)\n" > ${VCPKG_ROOT}/triplets/community/arm64-linux.cmake
+
+# 5. Installeer de Azure IoT C SDK voor ARM64
+RUN ${VCPKG_ROOT}/vcpkg install azure-iot-sdk-c:arm64-linux --clean-after-build && \
+    rm -rf ${VCPKG_ROOT}/downloads ${VCPKG_ROOT}/packages
 
 WORKDIR /app

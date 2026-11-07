@@ -79,6 +79,12 @@ docker build -f Dockerfile.arm64v8.cross -t module_student:arm64 .
 
 ### Step 4: Push to Container Registry
 
+Azure & container registry login
+```powershell
+az login --tenant <TENANT-ID>
+az acr login -n <ACR registry name>
+```
+
 **Preferred: via iotedgedev**:
 ```powershell
 cd workspace/iotedge-solution

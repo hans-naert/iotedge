@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.11)
+cmake_minimum_required(VERSION 3.10)
 
 macro(compileAsC99)
   if (CMAKE_VERSION VERSION_LESS "3.1")
@@ -14,6 +14,8 @@ endmacro(compileAsC99)
 
 compileAsC99()
 
+project(main LANGUAGES C)
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_EDGE_MODULES")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DUSE_EDGE_MODULES")
 
@@ -21,15 +23,18 @@ if(CMAKE_CROSSCOMPILING)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DDONT_USE_UPLOADTOBLOB")
 endif()
 
-# Set Azure IoT SDK include paths
-if(CMAKE_SYSROOT)
-    set(AZUREIOT_INC_FOLDER "${CMAKE_SYSROOT}/usr/include/azureiot" "${CMAKE_SYSROOT}/usr/include/azureiot/inc")
-    link_directories(${CMAKE_SYSROOT}/usr/lib)
-else()
-    set(AZUREIOT_INC_FOLDER "/usr/include/azureiot" "/usr/include/azureiot/inc")
-endif()
+# Azure IoT SDK paden via vcpkg
+set(VCPKG_INSTALLED_DIR "/opt/vcpkg/installed/arm64-linux")
 
-include_directories(${AZUREIOT_INC_FOLDER})
+include_directories(
+    ${VCPKG_INSTALLED_DIR}/include
+    ${VCPKG_INSTALLED_DIR}/include/azureiot
+    ${VCPKG_INSTALLED_DIR}/include/azureiot/inc
+)
+
+link_directories(
+    ${VCPKG_INSTALLED_DIR}/lib
+)
 
 set(main_c_files
     ./main.c
@@ -51,10 +56,8 @@ target_link_libraries(main
     ssl
     crypto
     m
-    uuid
 )
 
-# Add zlib for cross-compilation
 if(CMAKE_CROSSCOMPILING)
     target_link_libraries(main z)
 endif()

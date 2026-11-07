@@ -61,6 +61,11 @@ and
 docker-compose run --rm iotedge-dev iotedgedev   solution add -t c <module-name>
 ```
 
+### Add QEMU
+```powershell
+docker run --privileged --rm tonistiigi/binfmt --install all
+```
+
 ### Build the module image
 ```powershell
 docker-compose run --rm iotedge-dev iotedgedev solution build

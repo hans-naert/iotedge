@@ -29,6 +29,10 @@ docker-compose run --rm iotedge-dev iotedgedev solution init --template c
 - set the default platform to arm64v8: DEFAULT_PLATFORM="arm64v8"
 - set deployment target: IOTHUB_DEPLOYMENT_TARGET_CONDITION="deviceId='\<your-device-id\>'"
 
+### Add QEMU
+```powershell
+docker run --privileged --rm tonistiigi/binfmt --install all
+```
 
 ### Add module
 ```powershell
